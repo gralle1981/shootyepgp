@@ -3,7 +3,6 @@ local prices = {
   --- Onyxia ---
   --------------
    ---- Onyxia ----
-   [15410] = {0,"T1"}; -- Scale of Onyxia
    [16900] = {40,"T2"}; -- Stormrage Cover
    [16908] = {40,"T2"}; -- Bloodfang Hood
    [16914] = {40,"T2"}; -- Netherwind Crown
@@ -18,33 +17,26 @@ local prices = {
    [17068] = {32,"T1.5"}; -- Deathbringer
    [17075] = {24,"T1.5"}; -- Vis'kag the Bloodletter
    [17078] = {20,"T1.5"}; -- Sapphiron Drape
-   [17962] = {0,"T1"}; -- Blue Sack of Gems
-   [17963] = {0,"T1"}; -- Green Sack of Gems
-   [17964] = {0,"T1"}; -- Gray Sack of Gems
-   [17965] = {0,"T1"}; -- Yellow Sack of Gems
-   [17966] = {0,"T1"}; -- Onyxia Hide Backpack
-   [17969] = {0,"T1"}; -- Red Sack of Gems
+   [17966] = {0,"T1.5"}; -- Onyxia Hide Backpack
    [18205] = {16,"T1.5"}; -- Eskhandar's Collar
-   [18422] = {12,"T1"}; -- Head of Onyxia (Horde)
+   [18422] = {48,"T1.5"}; -- Head of Onyxia (Horde)
    [18423] = {48,"T1.5"}; -- Head of Onyxia (Alliance)
    [18705] = {0,"T1.5"}; -- Mature Black Dragon Sinew
    [18813] = {4,"T1.5"}; -- Ring of Binding
-   [21108] = {0,"T1"}; -- Draconic for Dummies
-   [30017] = {0,"T1"}; -- Onyxian Drake
 
    ---- Broodcommander Axelus ----
-   [33087] = {12,"T1"}; -- Libram of Ardour
-   [33089] = {12,"T1"}; -- Totem of Thundercall
-   [33098] = {12,"T1"}; -- Idol of Equilibrium
-   [33149] = {0,"T1"}; -- Battle Standard of the Broodcommander
-   [33150] = {0,"T1"}; -- Yoxtez, Black Breath of the Dragonflight
-   [33151] = {0,"T1"}; -- Onyxian Brood Egg
-   [33152] = {0,"T1"}; -- Prestor's Rod of Command
-   [33153] = {0,"T1"}; -- Ignited Obsidian Scale
-   [33154] = {6,"T1"}; -- Ring of Burning Talons
-   [33155] = {0,"T1"}; -- Scaleshield of Obsidian Flight
-   [33156] = {14,"T1"}; -- Dragonhunter Javelin
-   [33157] = {0,"T1"}; -- Broodwarden's Bulwarkblade
+   [33087] = {41,"T1.5"}; -- Libram of Ardour
+   [33089] = {41,"T1.5"}; -- Totem of Thundercall
+   [33098] = {41,"T1.5"}; -- Idol of Equilibrium
+   [33149] = {41,"T1.5"}; -- Battle Standard of the Broodcommander
+   [33150] = {32,"T1.5"}; -- Yoxtez, Black Breath of the Dragonflight
+   [33151] = {41,"T1.5"}; -- Onyxian Brood Egg
+   [33152] = {32,"T1.5"}; -- Prestor's Rod of Command
+   [33153] = {41,"T1.5"}; -- Ignited Obsidian Scale
+   [33154] = {21,"T1.5"}; -- Ring of Burning Talons
+   [33155] = {42,"T1.5"}; -- Scaleshield of Obsidian Flight
+   [33156] = {32,"T1.5"}; -- Dragonhunter Javelin
+   [33157] = {32,"T1.5"}; -- Broodwarden's Bulwarkblade
 
   --------------------
   --- World Bosses ---
@@ -1377,7 +1369,7 @@ sepgp.gp_prices = prices
   ["T3.5"] = 12
 }]]
 local progress_scaling = {
-  ["T3.5"] = {["T3.5"]=1,["T3"]=1,["T2.5"]=1,["T2"]=1,["T1.5"]=1,["T1"]=1},
+  ["T3.5"] = {["T3.5"]=1,["T3"]=1,	["T2"]=1, ["T1.5"]=1, ["T1"]=1},
   ["T3"] =   {["T3.5"]=1,["T3"]=1,  ["T2.5"]=1,  ["T2"]=1,  ["T1.5"]=1,["T1"]=1},
   ["T2.5"] = {["T3.5"]=1.5,["T3"]=1.5,["T2.5"]=1.5,["T2"]=2,  ["T1.5"]=2,["T1"]=2},
   ["T2"] =   {["T3.5"]=2,["T3"]=2,["T2.5"]=2,  ["T2"]=3,  ["T1.5"]=3,["T1"]=3},
