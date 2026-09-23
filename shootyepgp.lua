@@ -325,11 +325,11 @@ function sepgp:buildMenu()
         quality = {
           type = "text",
           name = L["Auto-loot up to Quality"],
-          desc = L["Items at or below this quality are auto-assigned."],
+          desc = L["Items at or below this quality are auto-assigned. BoP and quest items are always skipped, so only BoE items are picked up - BoP items still go through the normal bid system."],
           order = 20,
           get = function() return tostring(sepgp_autoloot_quality or 2) end,
           set = function(v) sepgp_autoloot_quality = tonumber(v) end,
-          validate = { ["0"] = L["1. Poor (Gray)"], ["1"] = L["2. Common (White)"], ["2"] = L["3. Uncommon (Green)"] },
+          validate = { ["0"] = L["1. Poor (Gray, BoE only)"], ["1"] = L["2. Common (White, BoE only)"], ["2"] = L["3. Uncommon (Green, BoE only)"], ["3"] = L["4. Rare (Blue, BoE only)"], ["4"] = L["5. Epic (Purple, BoE only)"] },
         },
         target = {
           type = "text",
