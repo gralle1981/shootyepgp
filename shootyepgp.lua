@@ -549,6 +549,7 @@ function sepgp:OnEnable() -- PLAYER_LOGIN (2)
       if sepgp:lootMaster() then
         sepgp:ShowAwardEpReminderIfNeeded()
         sepgp:AutoLootTrash()
+        sepgp:AnnounceLoot()
       end
     end)
   self:RegisterEvent("CHAT_MSG_RAID","captureLootCall")
@@ -886,11 +887,7 @@ function sepgp:LootFrameItem_OnClick(button,data)
   if LootSlotIsItem(slot) and quality >= 3 then 
     local itemLink = GetLootSlotLink(slot)
     if (itemLink) then
-      if button == "LeftButton" then
-        self:widestAudience(string.format(L["Whisper %s a + for %s (mainspec)"],sepgp._playerName,itemLink))
-      elseif button == "RightButton" then
-        self:widestAudience(string.format(L["Whisper %s a - for %s (offspec)"],sepgp._playerName,itemLink))
-      elseif button == "MiddleButton" then
+      if button == "LeftButton" or button == "RightButton" or button == "MiddleButton" then
         self:widestAudience(string.format(L["Whisper %s a + or - for %s (mainspec or offspec)"],sepgp._playerName,itemLink))
       end
     end
@@ -920,13 +917,7 @@ function sepgp:ContainerFrameItemButton_OnClick(button,ignoreModifiers)
     if (link_found) then
       local bind = self:itemBinding(itemString) or ""
       if (bind == self.VARS.boe) then
-        if button == "LeftButton" then
-          self:widestAudience(string.format(L["Whisper %s a + for %s (mainspec)"],sepgp._playerName,itemLink))
-          return
-        elseif button == "RightButton" then
-          self:widestAudience(string.format(L["Whisper %s a - for %s (offspec)"],sepgp._playerName,itemLink))
-          return
-        elseif button == "MiddleButton" then
+        if button == "LeftButton" or button == "RightButton" or button == "MiddleButton" then
           self:widestAudience(string.format(L["Whisper %s a + or - for %s (mainspec or offspec)"],sepgp._playerName,itemLink))
           return
         end    
@@ -2233,6 +2224,58 @@ function sepgp:AutoLootTrash()
           GiveMasterLoot(slot, raid_idx)
         end
       end
+    end
+  end
+end
+
+function sepgp:AnnounceLoot()
+  -- avoid re-announcing the same corpse if the loot window gets reopened
+  local sourceGUID = UnitExists("target") and UnitGUID("target")
+  if sourceGUID then
+    self._announcedLootSources = self._announcedLootSources or {}
+    if self._announcedLootSources[sourceGUID] then return end
+    self._announcedLootSources[sourceGUID] = true
+  end
+
+  local counts, order = {}, {}
+  for slot = 1, GetNumLootItems() do
+    if LootSlotIsItem(slot) then
+      local _, _, quantity, quality = GetLootSlotInfo(slot)
+      if quality ~= nil and quality >= 2 then -- Uncommon (Green) and up
+        local itemLink = GetLootSlotLink(slot)
+        if itemLink then
+          local link_found, _, itemColor, itemString = string.find(itemLink, "^(|c%x+)|H(.+)|h(%[.+%])")
+          if link_found then
+            local bind = self:itemBinding(itemString)
+            if bind == sepgp.VARS.bop then -- BoP (and quest) only - BoE items go through auto-loot/trade instead
+              if counts[itemLink] then
+                counts[itemLink] = counts[itemLink] + (quantity or 1)
+              else
+                counts[itemLink] = (quantity or 1)
+                table.insert(order, itemLink)
+              end
+            end
+          end
+        end
+      end
+    end
+  end
+
+  if table.getn(order) == 0 then return end
+
+  local targetName = UnitExists("target") and UnitName("target")
+  if targetName then
+    self:widestAudience(string.format(L["%s dropped:"], targetName))
+  else
+    self:widestAudience(L["Loot:"])
+  end
+  for i = 1, table.getn(order) do
+    local link = order[i]
+    local count = counts[link]
+    if count > 1 then
+      self:widestAudience(string.format("%dx %s", count, link))
+    else
+      self:widestAudience(link)
     end
   end
 end

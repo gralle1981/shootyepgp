@@ -228,6 +228,9 @@ Results will print here when done.]],
   ["3. Uncommon (Green, BoE only)"] = true,
   ["4. Rare (Blue, BoE only)"] = true,
   ["5. Epic (Purple, BoE only)"] = true,
+  -- loot announce (BoP only)
+  ["%s dropped:"] = true,
+  ["Loot:"] = true,
 
   ["Auto-loot Target"] = true,
   ["Character to receive auto-looted trash. Leave blank to keep it yourself."] = true,
