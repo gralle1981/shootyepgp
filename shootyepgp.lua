@@ -888,7 +888,7 @@ function sepgp:LootFrameItem_OnClick(button,data)
     local itemLink = GetLootSlotLink(slot)
     if (itemLink) then
       if button == "LeftButton" or button == "RightButton" or button == "MiddleButton" then
-        self:widestAudience(string.format(L["Whisper %s a + or - for %s (mainspec or offspec)"],sepgp._playerName,itemLink))
+        self:widestAudience(string.format(L["Whisper %s a + (Main Spec) or - (Off Spec) for %s"],sepgp._playerName,itemLink))
       end
     end
   end
@@ -918,7 +918,7 @@ function sepgp:ContainerFrameItemButton_OnClick(button,ignoreModifiers)
       local bind = self:itemBinding(itemString) or ""
       if (bind == self.VARS.boe) then
         if button == "LeftButton" or button == "RightButton" or button == "MiddleButton" then
-          self:widestAudience(string.format(L["Whisper %s a + or - for %s (mainspec or offspec)"],sepgp._playerName,itemLink))
+          self:widestAudience(string.format(L["Whisper %s a + (Main Spec) or - (Off Spec) for %s"],sepgp._playerName,itemLink))
           return
         end    
       end      
