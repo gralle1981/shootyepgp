@@ -548,8 +548,8 @@ function sepgp:OnEnable() -- PLAYER_LOGIN (2)
   self:RegisterEvent("LOOT_OPENED", function()
       if sepgp:lootMaster() then
         sepgp:ShowAwardEpReminderIfNeeded()
-        sepgp:AutoLootTrash()
         sepgp:AnnounceLoot()
+        sepgp:AutoLootTrash()
       end
     end)
   self:RegisterEvent("CHAT_MSG_RAID","captureLootCall")
@@ -2032,6 +2032,28 @@ function sepgp:itemBinding(item)
   return
 end
 
+-- Reads the binding of an item in a loot slot the same way RollFor does:
+-- the slot's own tooltip (SetLootItem, works even if the item isn't cached),
+-- and only line 2, compared exactly. Recipes/plans/patterns embed the tooltip
+-- of the item they create further down, so anything below line 2 must be ignored.
+function sepgp:lootSlotBinding(slot)
+  if not self._bindTooltip then
+    self._bindTooltip = CreateFrame("GameTooltip", "shootyepgpBindTooltip", nil, "GameTooltipTemplate")
+  end
+  local tip = self._bindTooltip
+  tip:SetOwner(WorldFrame, "ANCHOR_NONE")
+  tip:ClearLines()
+  tip:SetLootItem(slot)
+  if tip:NumLines() < 2 then return sepgp.VARS.nobind end
+  local line = getglobal("shootyepgpBindTooltipTextLeft2"):GetText()
+  if line == ITEM_BIND_ON_PICKUP or line == ITEM_SOULBOUND or line == ITEM_BIND_QUEST then
+    return sepgp.VARS.bop
+  elseif line == ITEM_BIND_ON_EQUIP or line == ITEM_BIND_ON_USE then
+    return sepgp.VARS.boe
+  end
+  return sepgp.VARS.nobind
+end
+
 function sepgp:addOrUpdateLoot(data,update)
   if not (update) then
     table.insert(sepgp_looted,data)
@@ -2209,18 +2231,8 @@ function sepgp:AutoLootTrash()
     if LootSlotIsItem(slot) then
       local _, _, quantity, quality = GetLootSlotInfo(slot)
       if quality ~= nil and quality <= maxQuality then
-        local skip = false
-        local itemLink = GetLootSlotLink(slot)
-        if itemLink then
-          local link_found, _, itemColor, itemString = string.find(itemLink, "^(|c%x+)|H(.+)|h(%[.+%])")
-          if link_found then
-            local bind = self:itemBinding(itemString)
-            if bind == sepgp.VARS.bop then -- covers both BoP and Quest items
-              skip = true
-            end
-          end
-        end
-        if not skip then
+        -- never hand out BoP, soulbound or quest items automatically
+        if self:lootSlotBinding(slot) ~= sepgp.VARS.bop then
           GiveMasterLoot(slot, raid_idx)
         end
       end
@@ -2230,31 +2242,28 @@ end
 
 function sepgp:AnnounceLoot()
   -- avoid re-announcing the same corpse if the loot window gets reopened
-  local sourceGUID = UnitExists("target") and UnitGUID("target")
+  local sourceGUID = UnitGUID and UnitExists("target") and UnitGUID("target") -- UnitGUID needs SuperWoW on 1.12
   if sourceGUID then
     self._announcedLootSources = self._announcedLootSources or {}
     if self._announcedLootSources[sourceGUID] then return end
     self._announcedLootSources[sourceGUID] = true
   end
 
+  -- Same rules as RollFor: BoP from Uncommon and up, plus anything at or above
+  -- the raid's loot threshold. Gray and white are never announced.
+  local threshold = GetLootThreshold() or 2
   local counts, order = {}, {}
   for slot = 1, GetNumLootItems() do
     if LootSlotIsItem(slot) then
       local _, _, quantity, quality = GetLootSlotInfo(slot)
-      if quality ~= nil and quality >= 2 then -- Uncommon (Green) and up
-        local itemLink = GetLootSlotLink(slot)
-        if itemLink then
-          local link_found, _, itemColor, itemString = string.find(itemLink, "^(|c%x+)|H(.+)|h(%[.+%])")
-          if link_found then
-            local bind = self:itemBinding(itemString)
-            if bind == sepgp.VARS.bop then -- BoP (and quest) only - BoE items go through auto-loot/trade instead
-              if counts[itemLink] then
-                counts[itemLink] = counts[itemLink] + (quantity or 1)
-              else
-                counts[itemLink] = (quantity or 1)
-                table.insert(order, itemLink)
-              end
-            end
+      local itemLink = GetLootSlotLink(slot)
+      if itemLink and quality ~= nil and quality >= 2 then
+        if quality >= threshold or self:lootSlotBinding(slot) == sepgp.VARS.bop then
+          if counts[itemLink] then
+            counts[itemLink] = counts[itemLink] + (quantity or 1)
+          else
+            counts[itemLink] = (quantity or 1)
+            table.insert(order, itemLink)
           end
         end
       end
