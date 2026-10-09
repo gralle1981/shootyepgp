@@ -342,6 +342,41 @@ function sepgp:buildMenu()
         },
       },
     }
+    options.args["announce"] = {
+      type = "group",
+      name = L["Announce Loot"],
+      desc = L["Announce dropped items to raid/party chat when you open a corpse as master looter."],
+      order = 73,
+      hidden = function() return not (admin()) end,
+      args = {
+        enable = {
+          type = "toggle",
+          name = L["Enable Loot Announce"],
+          desc = L["Announce dropped items to raid/party chat when you open a corpse as master looter."],
+          order = 10,
+          get = function() return not sepgp_announce_off end,
+          set = function(v) sepgp_announce_off = not sepgp_announce_off end,
+        },
+        quality = {
+          type = "text",
+          name = L["Announce from Quality"],
+          desc = L["Items at or above this quality are announced. Gray and white items are never announced."],
+          order = 20,
+          get = function() return tostring(sepgp_announce_quality or 2) end,
+          set = function(v) sepgp_announce_quality = tonumber(v) end,
+          validate = { ["2"] = L["1. Uncommon (Green)"], ["3"] = L["2. Rare (Blue)"], ["4"] = L["3. Epic (Purple)"], ["5"] = L["4. Legendary (Orange)"] },
+        },
+        bind = {
+          type = "text",
+          name = L["Announce Binding"],
+          desc = L["Which items to announce: BoP only, BoE only, or both. Quest items count as BoP, items without binding count as BoE."],
+          order = 30,
+          get = function() return sepgp_announce_bind or "both" end,
+          set = function(v) sepgp_announce_bind = v end,
+          validate = { ["both"] = L["1. BoP and BoE"], ["bop"] = L["2. BoP only"], ["boe"] = L["3. BoE only"] },
+        },
+      },
+    }
     options.args["raid_only"] = {
       type = "toggle",
       name = L["Raid Only"],
@@ -1805,7 +1840,7 @@ lootCall.bs = { -- blacklist
 }
 function sepgp:captureLootCall(text, sender)
   if not (string.find(text, "|Hitem:", 1, true)) then return end
-  local linkstriptext, count = string.gsub(text,"|c%x+|H[eimt:%d]+|h%[[%w%s',%-]+%]|h|r"," ; ")
+  local linkstriptext, count = string.gsub(text,"|c%x+|H[eimt:%d]+|h%[[%w%s',:%-]+%]|h|r"," ; ")
   if count > 1 then return end
   local lowtext = string.lower(linkstriptext)
   local whisperkw_found, mskw_found, oskw_found, link_found, blacklist_found
@@ -1827,7 +1862,7 @@ function sepgp:captureLootCall(text, sender)
     if (oskw_found) then break end
   end
   if (whisperkw_found) or (mskw_found) or (oskw_found) then
-    _,_,itemLink = string.find(text,"(|c%x+|H[eimt:%d]+|h%[[%w%s',%-]+%]|h|r)")
+    _,_,itemLink = string.find(text,"(|c%x+|H[eimt:%d]+|h%[[%w%s',:%-]+%]|h|r)")
     if (itemLink) and (itemLink ~= "") then
       link_found, _, itemColor, itemString, itemName = string.find(itemLink, "^(|c%x+)|H(.+)|h(%[.+%])")
     end
@@ -2249,16 +2284,19 @@ function sepgp:AnnounceLoot()
     self._announcedLootSources[sourceGUID] = true
   end
 
-  -- Same rules as RollFor: BoP from Uncommon and up, plus anything at or above
-  -- the raid's loot threshold. Gray and white are never announced.
-  local threshold = GetLootThreshold() or 2
+  if sepgp_announce_off then return end
+  -- quality and binding come from the "Announce Loot" menu. Gray and white are never announced.
+  local minQuality = tonumber(sepgp_announce_quality) or 2
+  if minQuality < 2 then minQuality = 2 end
+  local bindFilter = sepgp_announce_bind or "both"
   local counts, order = {}, {}
   for slot = 1, GetNumLootItems() do
     if LootSlotIsItem(slot) then
       local _, _, quantity, quality = GetLootSlotInfo(slot)
       local itemLink = GetLootSlotLink(slot)
-      if itemLink and quality ~= nil and quality >= 2 then
-        if quality >= threshold or self:lootSlotBinding(slot) == sepgp.VARS.bop then
+      if itemLink and quality ~= nil and quality >= minQuality then
+        local isBop = (bindFilter ~= "both") and (self:lootSlotBinding(slot) == sepgp.VARS.bop)
+        if bindFilter == "both" or (bindFilter == "bop" and isBop) or (bindFilter == "boe" and not isBop) then
           if counts[itemLink] then
             counts[itemLink] = counts[itemLink] + (quantity or 1)
           else
@@ -2270,22 +2308,38 @@ function sepgp:AnnounceLoot()
     end
   end
 
-  if table.getn(order) == 0 then return end
+  local entries = table.getn(order)
+  if entries == 0 then return end
 
-  local targetName = UnitExists("target") and UnitName("target")
+  -- RollFor style: plain raid/party chat (no raid warning), item count in the
+  -- heading, numbered lines, and at most 6 lines before "and X more items..."
+  local channel = UnitInRaid("player") and "RAID" or "PARTY"
+  local total = 0
+  for i = 1, entries do total = total + counts[order[i]] end
+
+  local targetName = UnitExists("target") and not UnitIsFriend("player", "target") and UnitName("target")
   if targetName then
-    self:widestAudience(string.format(L["%s dropped:"], targetName))
+    SendChatMessage(string.format(total == 1 and L["%s dropped %d item:"] or L["%s dropped %d items:"], targetName, total), channel)
   else
-    self:widestAudience(L["Loot:"])
+    SendChatMessage(string.format(total == 1 and L["%d item dropped:"] or L["%d items dropped:"], total), channel)
   end
-  for i = 1, table.getn(order) do
+
+  local limit = 6
+  local shown = entries
+  if entries > limit then shown = limit - 1 end
+  for i = 1, shown do
     local link = order[i]
     local count = counts[link]
     if count > 1 then
-      self:widestAudience(string.format("%dx %s", count, link))
+      SendChatMessage(string.format("%d. %dx%s", i, count, link), channel)
     else
-      self:widestAudience(link)
+      SendChatMessage(string.format("%d. %s", i, link), channel)
     end
+  end
+  if shown < entries then
+    local rest = 0
+    for i = shown + 1, entries do rest = rest + counts[order[i]] end
+    SendChatMessage(string.format(rest == 1 and L["and %d more item..."] or L["and %d more items..."], rest), channel)
   end
 end
 
