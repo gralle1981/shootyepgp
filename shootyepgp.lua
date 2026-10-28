@@ -1838,8 +1838,60 @@ lootCall.os = {
 lootCall.bs = { -- blacklist
   "^(roll)[%s%p%c]+.+",".+[%s%p%c]+(roll)$",".*[%s%p%c]+(roll)[%s%p%c]+.*"
 }
+local bidCallTemplates = {
+  "Whisper %s a + (Main Spec) or - (Off Spec) for %s",
+  "Whisper %s a + for %s (mainspec)",
+  "Whisper %s a - for %s (offspec)",
+  "Whisper %s a + or - for %s (mainspec or offspec)",
+}
+local bidCallPatterns
+function sepgp:isOwnBidCall(text)
+  if not bidCallPatterns then
+    bidCallPatterns = {}
+    for _,key in ipairs(bidCallTemplates) do
+      local tpl = L[key]
+      local pat, rest = "^", tpl
+      while true do
+        local i = string.find(rest, "%s", 1, true)
+        local piece = i and string.sub(rest, 1, i - 1) or rest
+        pat = pat .. string.gsub(piece, "([%^%$%(%)%%%.%[%]%*%+%-%?])", "%%%1")
+        if not i then break end
+        pat = pat .. ".-"
+        rest = string.sub(rest, i + 2)
+      end
+      table.insert(bidCallPatterns, pat .. "$")
+    end
+  end
+  for _,pat in ipairs(bidCallPatterns) do
+    if string.find(text, pat) then return true end
+  end
+  return false
+end
+
+-- Name of the current master looter, or nil when the loot method isn't master loot
+function sepgp:masterLooterName()
+  local method, partyMaster, raidMaster = GetLootMethod()
+  if method ~= "master" then return nil end
+  if raidMaster and UnitInRaid("player") then
+    return UnitName("raid"..raidMaster)
+  elseif partyMaster == 0 then
+    return UnitName("player")
+  elseif partyMaster then
+    return UnitName("party"..partyMaster)
+  end
+  return nil
+end
+
 function sepgp:captureLootCall(text, sender)
   if not (string.find(text, "|Hitem:", 1, true)) then return end
+  -- only react to bid calls from the actual master looter, and only under master loot.
+  -- Group loot, free for all etc. and ordinary raid chatter with an item link are ignored.
+  local ml = self:masterLooterName()
+  if not ml or sender ~= ml then return end
+  -- only react to shootyepgp's own bid-call messages. Other addons the master looter
+  -- may run (RollFor SR+, etc.) post item links with "+", "-", "MS"/"OS" that would
+  -- otherwise be mistaken for EPGP bid calls.
+  if not self:isOwnBidCall(text) then return end
   local linkstriptext, count = string.gsub(text,"|c%x+|H[eimt:%d]+|h%[[%w%s',:%-]+%]|h|r"," ; ")
   if count > 1 then return end
   local lowtext = string.lower(linkstriptext)
