@@ -369,12 +369,14 @@ function sepgp_standings:BuildStandingsTable()
   if (sepgp_raidonly) and GetNumRaidMembers() > 0 then
     for i = 1, GetNumRaidMembers(true) do
       local name, rank, subgroup, level, class, fileName, zone, online, isDead = GetRaidRosterInfo(i) 
-      r[name] = true
+      if name then r[name] = true end
     end
   end
   sepgp.alts = {}
   for i = 1, GetNumGuildMembers(1) do
     local name, rank, _, _, class, _, note, officernote, _, _ = GetGuildRosterInfo(i)
+    -- the roster can hand back empty entries while it reloads (e.g. zoning in/out of a battleground)
+    if name and name ~= "" then
 		local ep, gp = sepgp:parse_epgp_v3(officernote)
     -- local ep = (sepgp:get_ep_v3(name,officernote) or 0) 
     -- local gp = (sepgp:get_gp_v3(name,officernote) or sepgp.VARS.basegp)
@@ -396,6 +398,7 @@ function sepgp_standings:BuildStandingsTable()
 		if ep > 100 and ((not sepgp_raidonly) or next(r) and r[name]) then
 			table.insert(t,{name,class,armor_class,rank,ep,gp,ep/gp,rank_idx})
 		end
+    end
     -- if ep > 0 then
     --   if (sepgp_raidonly) and next(r) then
     --     if r[name] then

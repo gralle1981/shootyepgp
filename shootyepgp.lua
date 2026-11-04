@@ -2242,9 +2242,13 @@ function sepgp:processLoot(player,itemLink,source)
 end
 
 function sepgp:findGuildMember(name)
+	if type(name) ~= "string" or name == "" then return nil end
+	local lname = string.lower(name)
 	for i=1,GetNumGuildMembers(1) do
 		local g_name, g_rank, g_rankIndex, g_level, g_class, g_zone, g_note, g_officernote, g_online = GetGuildRosterInfo(i)
-		if (string.lower(name) == string.lower(g_name)) then
+		-- g_name can be nil while the guild roster is still loading, or for offline
+		-- members when "Show Offline Members" is unticked in the guild window
+		if g_name and lname == string.lower(g_name) then
 			local ep, gp = self:parse_epgp_v3(g_officernote)
 			return { 
 				name = g_name, rank = g_rank, 
